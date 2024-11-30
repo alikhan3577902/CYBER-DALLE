@@ -72,7 +72,7 @@ app.get('/generate', async (req, res) => {
                     const savedImagePath = await saveImageToDisk(imageUrl, uniqueFileName);
 
                     // Return image path
-                    return `https://5a76b7cd-f475-4b38-9703-d660d4f4d38a-00-1ke95l152ljgi.kirk.replit.dev${savedImagePath}`;
+                    return `https://cyber-dalle.onrender.com${savedImagePath}`;
                 })
             );
 
