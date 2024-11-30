@@ -40,23 +40,30 @@ const saveImageToDisk = async (imageUrl, filename) => {
     }
 };
 
-// Endpoint to generate and save images
-app.post('/generate', async (req, res) => {
+// Endpoint to generate and save images using URL parameters
+app.get('/generate', async (req, res) => {
     try {
-        const { text, height, width, model, count } = req.body;
+        // Extract the parameters from URL query
+        const { text, height, width, model, count } = req.query;
 
         if (!text) {
             return res.status(400).json({ error: true, msg: 'The "text" field is required.' });
         }
 
+        // Use default values if optional parameters are not provided
+        const imageHeight = height || 1024;
+        const imageWidth = width || 1024;
+        const imageCount = count || 1;
+        const imageModel = model || 'dall-e-3';
+
         // Call the image generation function
-        const result = await genDallE(text, height, width, model, count);
+        const result = await genDallE(text, imageHeight, imageWidth, imageModel, imageCount);
         console.log('genDallE result:', result);  // Log the result to debug
 
         // Check if result is an array
         if (Array.isArray(result)) {
-            // Concurrently download and save all images
-            const savedImages = await Promise.all(
+            // Create a list of image URLs
+            const imageLinks = await Promise.all(
                 result.map(async (item) => {
                     const imageUrl = item.attrs.src;
                     if (!imageUrl) return null; // Skip if no image URL
@@ -64,24 +71,25 @@ app.post('/generate', async (req, res) => {
                     const uniqueFileName = `${uuidv4()}.png`;
                     const savedImagePath = await saveImageToDisk(imageUrl, uniqueFileName);
 
-                    // Return metadata
-                    return {
-                        generated_link: savedImagePath,
-                        prompt: item.attrs.query,
-                        width: item.attrs.meta.width,
-                        height: item.attrs.meta.height,
-                        createdTime: item.createdTime,
-                    };
+                    // Return image path
+                    return `https://5a76b7cd-f475-4b38-9703-d660d4f4d38a-00-1ke95l152ljgi.kirk.replit.dev${savedImagePath}`;
                 })
             );
 
             // Filter out null values (failed downloads)
-            const successfulImages = savedImages.filter(Boolean);
+            const successfulImages = imageLinks.filter(Boolean);
 
+            // Create the response object dynamically based on the number of images
+            const imageFields = successfulImages.reduce((acc, url, index) => {
+                acc[`img_${index + 1}`] = url; // Generate dynamic keys like img_1, img_2, etc.
+                return acc;
+            }, {});
+
+            // Structure response data with dynamic keys
             res.json({
-                success: true,
-                count: successfulImages.length,
-                generated_images: successfulImages,
+                "TG : @PakCyberXpert": [
+                    imageFields
+                ]
             });
         } else {
             // Handle case when genDallE does not return an array
